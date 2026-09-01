@@ -43,45 +43,39 @@ keywords = [
 ]
 
 # ---------------- CORE DEPENDENCIES (SAFE DEFAULT) ----------------
+#
+# "SAFE DEFAULT" betekent hier: wat een plain ``pip install semantica`` nodig heeft
+# om de standaard-paden te draaien -- niet alles wat een van de paden ooit zou
+# kunnen gebruiken. Zeven pakketten hieronder waren dat laatste, en vier daarvan
+# domineren de installatiegrootte (torch, opencv, faiss, spacy).
+#
+# Wat verhuisd is en waarom (gemeten op deze tree, niet aangenomen):
+#
+#   * NERGENS GEIMPORTEERD -- geen enkele ``import``/``from`` in de hele repo
+#     (semantica/, integrations/, tests/, examples/, plugins/):
+#       spacy, librosa, opencv-python, seaborn, ipywidgets, onnxruntime,
+#       tokenizers, protobuf, grpcio
+#     De spacy/thinc-pins hieronder onderhielden een oplosser-probleem voor een
+#     pakket dat de code niet aanroept.
+#
+#   * WEL GEBRUIKT, MAAR AL LAZY -- de code importeert ze binnen een functie of
+#     een try-blok, dus ze horen per constructie in een extra en niet in de
+#     default: torch, transformers, sentence-transformers, faiss-cpu, fastembed,
+#     gensim, umap-learn, plotly.
+#
+#   * matplotlib is de enige met een top-level import, en uitsluitend in
+#     ``semantica/visualization/`` -- dat is een natuurlijke extra-grens
+#     (``semantica[plots]``), geen default.
+#
+# Terug naar de oude situatie: ``pip install semantica[nlp,media,plots,vectors-local,rpc]``
+# (en ``semantica[all]`` bevat ze alle vijf, dus ``all`` verandert niet van inhoud).
 dependencies = [
   "numpy>=2.0.2",
   "pandas>=1.3.0",
   "scipy>=1.13.1",
   "scikit-learn>=1.7.2",
-  "umap-learn>=0.5.12",
-  # thinc (spacy's core dep) dropped Python 3.9 wheels at 8.3.10, and later
-  # spacy patch releases (3.8.8+) require thinc>=8.3.9-only-on-3.10+ ranges,
-  # which forces a source build that fails outright on 3.9 (see Install
-  # Matrix run history). Capping both keeps 3.9 on the last wheel-compatible
-  # pair; 3.10+ is left unconstrained to always get the latest spacy/thinc.
-  "spacy>=3.4.0,<3.8.8; python_version < '3.10'",
-  "spacy>=3.4.0; python_version >= '3.10'",
-  "thinc<8.3.5; python_version < '3.10'",
-  "transformers>=4.20.0",
-  "torch>=1.13.1",
-  "sentence-transformers>=2.2.0",
   "rdflib>=6.2.0",
   "networkx>=2.8.0",
-  "matplotlib>=3.9.4",
-  "seaborn>=0.13.2",
-  "plotly>=6.8.0",
-  "ipywidgets>=8.0.0",
-  "requests>=2.34.2",
-  "GitPython>=3.1.58",
-  "chardet>=7.4.3",
-  "protobuf>=5.29.1,<8.0",
-  "grpcio>=1.81.1",
-  "beautifulsoup4>=4.15.0",
-  "lxml>=6.1.1",
-  "python-docx>=1.2.0",
-  "openpyxl>=3.1.5",
-  "pillow>=12.2.0",
-  "librosa>=0.9.0",
-  "opencv-python>=4.13.0.92",
-  "faiss-cpu>=1.7.0",
-  "fastembed>=0.2.0",
-  "onnxruntime>=1.20.1",
-  "tokenizers>=0.15.0",
   "pydantic>=2.13.4",
   "click>=8.4.2",
   "rich>=12.5.0",
@@ -91,8 +85,15 @@ dependencies = [
   "python-dotenv>=1.2.1",
   "loguru>=0.7.3",
   "structlog>=22.1.0",
-  "gensim>=4.4.0",
+  "requests>=2.34.2",
   "httpx<0.29.0",
+  "GitPython>=3.1.58",
+  "chardet>=7.4.3",
+  "beautifulsoup4>=4.15.0",
+  "lxml>=6.1.1",
+  "python-docx>=1.2.0",
+  "openpyxl>=3.1.5",
+  "pillow>=12.2.0",
   "pyarrow>=14.0.0"
 ]
 
@@ -141,7 +142,53 @@ db-all = [
   "semantica[db-snowflake,db-databricks,db-salesforce,db-arrow]"
 ]
 
+# ---- Zware paden die tot v0.6.7 in de core-dependencies stonden ----
+# Elk van deze wordt door de code lazy geimporteerd (of helemaal niet), dus ze
+# kunnen opt-in zijn zonder een enkel codepad te breken.
+nlp = [
+  "transformers>=4.20.0",
+  "torch>=1.13.1",
+  "sentence-transformers>=2.2.0",
+  # thinc (spacy's core dep) dropped Python 3.9 wheels at 8.3.10, and later
+  # spacy patch releases (3.8.8+) require thinc>=8.3.9-only-on-3.10+ ranges,
+  # which forces a source build that fails outright on 3.9 (see Install
+  # Matrix run history). Capping both keeps 3.9 on the last wheel-compatible
+  # pair; 3.10+ is left unconstrained to always get the latest spacy/thinc.
+  "spacy>=3.4.0,<3.8.8; python_version < '3.10'",
+  "spacy>=3.4.0; python_version >= '3.10'",
+  "thinc<8.3.5; python_version < '3.10'",
+  "gensim>=4.4.0"
+]
+
+media = [
+  "librosa>=0.9.0",
+  "opencv-python>=4.13.0.92"
+]
+
+plots = [
+  "matplotlib>=3.9.4",
+  "seaborn>=0.13.2",
+  "plotly>=6.8.0",
+  "ipywidgets>=8.0.0",
+  "umap-learn>=0.5.12"
+]
+
+vectors-local = [
+  "faiss-cpu>=1.7.0",
+  "fastembed>=0.2.0",
+  "onnxruntime>=1.20.1",
+  "tokenizers>=0.15.0"
+]
+
+rpc = [
+  "protobuf>=5.29.1,<8.0",
+  "grpcio>=1.81.1"
+]
+
 # ---- Embedding / Models ----
+# Tot v0.6.7 dupliceerde deze groep torch+transformers die al in de core stonden,
+# waardoor "optioneel" niets betekende. Nu ze uit de core weg zijn, is dit weer
+# een echte keuze; ``nlp`` is de bredere variant (voegt spacy/gensim toe).
 models-huggingface = [
   "transformers>=4.20.0",
   "torch>=1.13.1"
@@ -263,8 +310,8 @@ explorer-lite = [
 # (CVE-2026-45829) with no fixed release — including it here would fail the CI
 # dependency-audit/security gates.  Install it explicitly via ``semantica[crewai]``.
 all = [
-  "semantica[dev,viz,infra,cloud,monitoring,watch,llm-all,models-huggingface,split-all,graph-all,tripletstore-oxigraph,vectorstore-all,parse-docling,ingest-parquet,ingest-arrow,shacl,explorer]",
-  "semantica[dev,viz,infra,cloud,monitoring,watch,llm-all,models-huggingface,split-all,graph-all,tripletstore-oxigraph,vectorstore-all,parse-docling,ingest-parquet,ingest-arrow,shacl,agno,langchain]"
+  "semantica[dev,viz,infra,cloud,monitoring,watch,llm-all,models-huggingface,nlp,media,plots,vectors-local,rpc,split-all,graph-all,tripletstore-oxigraph,vectorstore-all,parse-docling,ingest-parquet,ingest-arrow,shacl,explorer]",
+  "semantica[dev,viz,infra,cloud,monitoring,watch,llm-all,models-huggingface,nlp,media,plots,vectors-local,rpc,split-all,graph-all,tripletstore-oxigraph,vectorstore-all,parse-docling,ingest-parquet,ingest-arrow,shacl,agno,langchain]"
 ]
 
 # ---------------- ENTRYPOINTS ----------------
