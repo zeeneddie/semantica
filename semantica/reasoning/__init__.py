@@ -15,7 +15,6 @@ from .reasoner import (
     CallAction,
     EmitEventAction,
 )
-from .graph_reasoner import GraphReasoner
 from .explanation_generator import (
     Explanation,
     ExplanationGenerator,
@@ -34,7 +33,59 @@ from .rete_engine import (
 from .sparql_reasoner import SPARQLQueryResult, SPARQLReasoner
 
 from .datalog_reasoner import DatalogReasoner, DatalogFact, DatalogRule
-from .temporal_reasoning import IntervalRelation, TemporalInterval, TemporalReasoningEngine
+
+# ---------------------------------------------------------------------------
+# Lazily loaded members (PEP 562).
+#
+# Everything above is standard-library-only: the Rete network, the Datalog
+# evaluator, forward chaining, the SPARQL parser and the explanation generator
+# import nothing outside ``re``/``uuid``/``typing``/``dataclasses``/
+# ``collections``/``datetime``/``enum``. Two members were the exception and they
+# pulled the whole heavy stack into ``import semantica.reasoning``:
+#
+#   * the temporal trio  -> ``semantica.temporal_reasoning`` is a shim over
+#                           ``semantica.kg``, whose ``__init__`` eagerly imports
+#                           ``centrality_calculator`` -> ``numpy``. This is the
+#                           edge that made the whole package numpy-dependent.
+#   * ``GraphReasoner``   -> ``semantica.semantic_extract.providers``. This one
+#                           costs no third-party import today, but it is the
+#                           LLM-backed reasoner: keeping it out of the eager path
+#                           is what makes "no model calls in this module" a
+#                           property you can verify rather than a claim.
+#
+# Deferring these two keeps the deterministic engines importable in an
+# environment with no third-party packages at all, which is what makes them
+# usable as an audit/policy layer underneath other stacks. The public API is
+# unchanged: ``from semantica.reasoning import GraphReasoner`` still works and
+# still returns the same object -- it is resolved on first access instead of at
+# import time.
+# ---------------------------------------------------------------------------
+
+_LAZY_MEMBERS = {
+    "GraphReasoner": ".graph_reasoner",
+    "IntervalRelation": ".temporal_reasoning",
+    "TemporalInterval": ".temporal_reasoning",
+    "TemporalReasoningEngine": ".temporal_reasoning",
+}
+
+
+def __getattr__(name):
+    """Resolve the deferred members on first access (PEP 562)."""
+    module_name = _LAZY_MEMBERS.get(name)
+    if module_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+    from importlib import import_module
+
+    module = import_module(module_name, __name__)
+    value = getattr(module, name)
+    globals()[name] = value  # cache: subsequent lookups skip __getattr__
+    return value
+
+
+def __dir__():
+    return sorted(set(globals()) | set(_LAZY_MEMBERS))
+
 
 __all__ = [
     # Reasoner facade
