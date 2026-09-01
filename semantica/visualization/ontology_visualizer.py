@@ -35,8 +35,15 @@ License: MIT
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-import matplotlib.patches as mpatches
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.patches as mpatches
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import FancyBboxPatch
+except ImportError as exc:  # pragma: no cover
+    raise ImportError(
+        "semantica.visualization needs matplotlib, which is an optional "
+        "dependency. Install it with:  pip install 'semantica[plots]'"
+    ) from exc
 
 try:
     import plotly.express as px
@@ -47,7 +54,6 @@ except (ImportError, OSError):
     go = None
     make_subplots = None
 
-from matplotlib.patches import FancyBboxPatch
 
 try:
     import graphviz

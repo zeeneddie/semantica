@@ -33,7 +33,14 @@ License: MIT
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except ImportError as exc:  # pragma: no cover
+    raise ImportError(
+        "semantica.visualization needs matplotlib, which is an optional "
+        "dependency. Install it with:  pip install 'semantica[plots]'"
+    ) from exc
+
 import numpy as np
 
 try:
